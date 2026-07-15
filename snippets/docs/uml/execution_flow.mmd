@@ -1,0 +1,58 @@
+%% Execution flow - ESGenerator.generate() end-to-end (cli.py "generate" command)
+%% ESGenerator lives in es_generator.py; the functions called below
+%% (_load_route, _random_gene, _set_step_scale, _mutate_gene, _trap_gene, ...)
+%% live in geometry.py and are imported.
+
+flowchart TD
+    Start(["cli.py generate mission.yaml budget"]) --> Init["ESGenerator.__init__\nloads route from .ulg (_load_route), tunes the\nmutation step on the corridor (_set_step_scale)"]
+    Init --> Gen["generate(budget)"]
+
+    Gen --> Resume{"checkpoint.json\nexists and valid?"}
+    Resume -- no --> BootstrapCheck{"nominal route\navailable?"}
+    BootstrapCheck -- no --> Bootstrap["_bootstrap_route_if_needed\n1 sim with no obstacles (costs 1 budget unit)"]
+    BootstrapCheck -- yes --> FreshInit
+    Bootstrap --> FreshInit["_seeding = True\nINIT_SEEDS candidates ready (_random_gene)"]
+    Resume -- yes --> LoadCkpt["_load_checkpoint\nrestores archive, parent, sigma,\nroute, seeding state"]
+
+    FreshInit --> SeedCheck
+    LoadCkpt --> SeedCheck{"_seeding == True?"}
+    SeedCheck -- yes --> Seed["evaluates the remaining seeds one at a time\n(_eval_seed, checkpoint before/after each)"]
+    Seed --> BestSeed["parent = best seed\n_seeding = False"]
+    SeedCheck -- no --> Loop
+    BestSeed --> Loop
+
+    Loop{"budget_used <\ntotal_budget ?"}
+    Loop -- no --> Ranked["_ranked_archive\nsorts by _ranking_score (Formula 2)"]
+
+    Loop -- yes --> Pending{"test interrupted\nby a crash?"}
+    Pending -- yes --> Reuse["redone from scratch\n(same saved genes)"]
+    Pending -- no --> Child["_make_child(parent, sigma)\ngaussian mutation + optional\nobstacle added (trap-gene) or removed"]
+    Reuse --> SaveP["save_checkpoint\n(pending = test in progress)"]
+    Child --> SaveP
+
+    SaveP --> Evaluate["_evaluate\nN_RUNS simulations + optional\nanti-noise confirmation if dist < CONFIRM_BELOW"]
+    Evaluate --> Improved{"child fitness <\nparent fitness?"}
+    Improved -- yes --> AcceptChild["parent = child\nstagnation = 0"]
+    Improved -- no --> IncStag["stagnation += 1"]
+
+    AcceptChild --> Archive["_maybe_archive\nDTW dedup across trajectories"]
+    IncStag --> Archive
+    Archive --> Redundant{"outcome =\nARCH_REDUNDANT?"}
+    Redundant -- yes --> IncStag2["stagnation += 1 extra\n(basin already milked)"]
+    Redundant -- no --> Sigma
+    IncStag2 --> Sigma["_adapt_sigma\nRechenberg's 1/5 rule"]
+
+    Sigma --> StagCheck{"stagnation >=\nSTAGNATION_LIMIT?"}
+    StagCheck -- no --> SaveG
+    StagCheck -- yes --> BucketCheck{"all y buckets\nalready covered?"}
+    BucketCheck -- no --> RestartDiv["_restart_individual\nnew uncovered y bucket\n(RESTART_CANDIDATES, min IoU)"]
+    BucketCheck -- "yes, prob INTENSIFY_PROB" --> RestartInt["_intensify_individual\nrefines the most severe fail in the archive"]
+    BucketCheck -- "yes, otherwise" --> RestartDiv
+    RestartDiv --> SaveG["save_checkpoint\n(end of generation)"]
+    RestartInt --> SaveG
+    SaveG --> Loop
+
+    Ranked --> Delivery["cli.py: write_final_selection()"]
+    Delivery --> SelectDTW["_delivery_selection\ngreedy on score, set\nseparated in trajectory space (DTW)"]
+    SelectDTW --> Copy["copies from all_fails/ to\nconsegna/rankNN_* (rank01 = best)"]
+    Copy --> End(["final log: Consegna: N test in consegna/"])

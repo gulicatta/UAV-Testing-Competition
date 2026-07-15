@@ -1,0 +1,6 @@
+logs/
+presentation.md
+*.ulg
+!generated_tests/*/consegna/**
+__pycache__/
+*.pyc

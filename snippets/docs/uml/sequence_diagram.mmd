@@ -1,0 +1,58 @@
+%% Sequence diagram - a complete run, from the CLI command to delivery
+%% Gen = ESGenerator (es_generator.py); its self-messages to Gen include
+%% calls to geometry.py functions (sampling, mutation, DTW) imported as
+%% functions, not shown as separate participants.
+
+sequenceDiagram
+    actor User
+    participant CLI as cli.py
+    participant Gen as ESGenerator
+    participant FS as Filesystem
+    participant TC as TestCase
+    participant Agent as DockerAgent
+    participant Sim as PX4Gazebo
+
+    User ->> CLI: python3 cli.py generate mission.yaml budget
+    CLI ->> Gen: init case_study_file
+    Gen ->> FS: reads mission.ulg via _load_route
+    Gen ->> Gen: _set_step_scale, step tuned on the corridor
+    CLI ->> Gen: generate budget
+
+    alt checkpoint.json present
+        Gen ->> FS: _load_checkpoint
+        FS -->> Gen: archive, parent, sigma, route
+    else first start
+        Gen ->> Gen: _bootstrap_route_if_needed if needed
+        Gen ->> Gen: samples INIT_SEEDS candidates and evaluates the best one
+    end
+
+    loop while budget_used is less than total_budget
+        Gen ->> Gen: _make_child parent sigma
+        Gen ->> FS: save_checkpoint, pending equals test in progress
+        Gen ->> TC: creates TestCase with case_study and obstacles
+        Gen ->> TC: execute
+        TC ->> Agent: run
+        Agent ->> Sim: starts mission with the obstacles
+        Sim -->> Agent: trajectory recorded in ulg
+        Agent -->> TC: trajectory and log_file
+        TC -->> Gen: min_distance from get_distances
+
+        opt distance below CONFIRM_BELOW
+            Gen ->> TC: extra anti-noise confirmation run
+        end
+
+        Gen ->> Gen: _maybe_archive, DTW dedup against archive
+        opt valid fail, distance below SOFT_FAIL
+            Gen ->> FS: _dump_fail saves yaml, ulg, and plot in all_fails
+        end
+        Gen ->> Gen: _adapt_sigma, then restart or intensify if stagnating
+        Gen ->> FS: save_checkpoint at the end of the generation
+
+        Note over CLI,Sim: if Gazebo crashes, start.sh restarts the container and the pending test starts over from scratch, the archive stays intact
+    end
+
+    CLI ->> Gen: write_final_selection
+    Gen ->> Gen: _delivery_selection, subset separated in DTW
+    Gen ->> FS: copies the ranks from all_fails to consegna
+    Gen -->> CLI: final line, delivers N tests in the folder
+    CLI -->> User: final log

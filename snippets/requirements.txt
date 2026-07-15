@@ -1,0 +1,11 @@
+### include any additional libraries used in your code here
+### do not include aerialist, it is already installed in the Dockerimage
+
+# Optional but recommended: Fast DTW distance for diversity filtering
+# Uncomment if you want faster post-processing DTW computation
+# dtaidistance>=1.3.1
+
+# For trajectory analysis and numerical operations
+numpy>=1.19.0
+matplotlib>=3.3.0
+pyyaml>=5.0

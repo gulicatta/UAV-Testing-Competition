@@ -1,0 +1,46 @@
+mission:
+  commands:
+  - mode: 3
+    r: 0
+    timestamp: 1
+    x: 0
+    y: 0
+    z: 0.5
+robot:
+  mission_file: case_studies/mission3.plan
+  params:
+    MIS_TAKEOFF_ALT: 1.0
+    MIS_YAW_ERR: 12.0
+    MPC_YAW_MODE: 0
+    NAV_ACC_RAD: 0.5
+    NAV_DLL_ACT: 0
+    NAV_MC_ALT_RAD: 0.5
+    NAV_RCL_ACT: 3
+    SDLOG_PROFILE: 7
+  port: 14541
+simulation:
+  headless: true
+  obstacles:
+  - position:
+      r: 50.27744008157354
+      x: -1.3438937994907694
+      y: 19.172291091628647
+      z: 0.0
+    shape: box
+    size:
+      h: 19.06999050237684
+      l: 14.878688701478339
+      r: 0
+      w: 2
+  - position:
+      r: 72.98179521451266
+      x: 11.662159079461148
+      y: 23.1595175834375
+      z: 0.0
+    shape: box
+    size:
+      h: 19.62912040189188
+      l: 2.5304412232143556
+      r: 0
+      w: 8.3
+  simulator: ros

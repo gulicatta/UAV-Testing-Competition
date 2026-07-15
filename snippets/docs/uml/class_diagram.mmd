@@ -1,0 +1,101 @@
+%% Class diagram - ES generator (UAV Testing Competition)
+%% Pure module-level functions (_random_gene, _fit_center, _boxes_overlap,
+%% _dtw_mean, _point, _ranking_score, ...) live in geometry.py; constants
+%% live in config.py. Neither has classes, so they don't appear as
+%% namespaces below: they're called from ESGenerator and Individual (see
+%% the note on ESGenerator).
+
+classDiagram
+    namespace models {
+        class Individual {
+            +float[][] genes
+            +float fitness
+            +float min_distance
+            +bool completed
+            +TestCase test_case
+            +string fail_base
+            +float avg_point
+            +float avg_flight_min
+            +float[][] traj
+            +obstacles() Obstacle[]
+        }
+    }
+
+    namespace es_generator {
+        class ESGenerator {
+            +string ALL_FAILS_DIR
+            +string DELIVERY_DIR
+            +AerialistTest case_study
+            +int budget_used
+            +int total_budget
+            +Individual[] archive
+            +Individual parent
+            +float sigma
+            +int generation
+            +int stagnation
+            +string output_dir
+            +__init__(case_study_file)
+            +generate(budget) Individual[]
+            +save_checkpoint()
+            +write_final_selection() int
+            -_run_once(obstacles) TestCase
+            -_evaluate(ind) float
+            -_bootstrap_route_if_needed()
+            -_load_checkpoint() bool
+            -_eval_seed(seed)
+            -_make_child(parent, sigma) Individual
+            -_adapt_sigma(sigma, history) float
+            -_restart_individual() Individual
+            -_intensify_individual() Individual
+            -_y_bucket(ind) int
+            -_maybe_archive(ind) int
+            -_dup_of(ind) Individual
+            -_too_similar(a, b) bool
+            -_replace_in_archive(victim, ind)
+            -_dump_fail(ind)
+            -_plot_fail(ulg, yaml, png)
+            -_delivery_selection() tuple
+            -_ranked_archive() Individual[]
+        }
+
+        class RandomGenerator {
+            -_make_child(parent, sigma) Individual
+            -_restart_individual() Individual
+        }
+    }
+
+    namespace testcase {
+        class TestCase {
+            +AerialistTest test
+            +Trajectory trajectory
+            +string log_file
+            +execute() Trajectory
+            +get_distances() float[]
+            +save_yaml(path)
+        }
+    }
+
+    class AerialistTest {
+        <<aerialist library>>
+    }
+
+    class Obstacle {
+        <<aerialist library>>
+    }
+
+    class DockerAgent {
+        <<aerialist library>>
+        +run() TestResult[]
+    }
+
+    note for ESGenerator "uses config.py and geometry.py as imported functions, not classes"
+
+    RandomGenerator --|> ESGenerator : inherits everything except make_child/restart
+    ESGenerator "1" o-- "0..20" Individual : archive
+    ESGenerator "1" o-- "0..1" Individual : parent
+    ESGenerator "1" *-- "1" AerialistTest : case_study
+    ESGenerator ..> TestCase : creates per attempt
+    Individual "1" o-- "0..1" TestCase : test_case
+    Individual ..> Obstacle : obstacles()
+    TestCase ..> AerialistTest : deepcopy
+    TestCase ..> DockerAgent : execute()
