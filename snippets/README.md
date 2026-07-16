@@ -188,5 +188,7 @@ happens to already be the simplest one found.
 
 ## Documentation
 
+[`docs/SETUP.md`](docs/SETUP.md): installation, execution, verification, and troubleshooting guide.
+
 [`docs/uml/`](docs/uml/): class diagram, execution flow, and sequence diagram
 (Mermaid) of `ESGenerator` and the search cycle.
