@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> The project developed in this fork is located in the [`snippets/`](snippets/) directory. See the [project README](snippets/README.md) for the complete description and follow the detailed [Setup Guide](snippets/docs/SETUP.md) before installation or execution.
+
 # UAV Testing Competition
 
 <p align="center">

@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Before installing or running the project, follow the detailed [Setup Guide](docs/SETUP.md). It contains the required installation, configuration, execution, verification, and troubleshooting instructions.
+
 # UAV Test Generator — (1+1)-ES with DTW diversity
 
 Test generator for the UAV Testing Competition: generates obstacle
