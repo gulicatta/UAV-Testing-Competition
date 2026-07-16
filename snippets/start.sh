@@ -6,6 +6,8 @@ HEADLESS=${3:-true}
 HOST_UID=$(id -u)
 HOST_GID=$(id -g)
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 # accepts a short name ("mission3") or a full path; the file must be in
 # case_studies/ with a nominal .plan and .ulg (used for adaptive init, or
 # obtained with 1 bootstrap sim if absent)
@@ -36,7 +38,7 @@ echo "================================================"
 # Clean up zombie containers from previous runs/crashes
 docker ps -aq --filter ancestor=skhatiri/aerialist | xargs -r docker rm -f 2>/dev/null
 
-mkdir -p ~/UAV-Testing-Competition/snippets/generated_tests
+mkdir -p "$SCRIPT_DIR/generated_tests"
 
 if [ "$HEADLESS" = "false" ]; then
     xhost +local:docker
@@ -89,8 +91,8 @@ while [ "$STOP" = "0" ] ; do
     -e INTENSIFY_PROB=${INTENSIFY_PROB:-0.4} \
     -e CONFIRM_BELOW=${CONFIRM_BELOW:-1.0} \
     -e CONFIRM_EXTRA_RUNS=${CONFIRM_EXTRA_RUNS:-1} \
-    -v ~/UAV-Testing-Competition/snippets:/workspace \
-    -v ~/UAV-Testing-Competition/snippets/generated_tests:/src/aerialist/generated_tests \
+    -v "$SCRIPT_DIR:/workspace" \
+    -v "$SCRIPT_DIR/generated_tests:/src/aerialist/generated_tests" \
     skhatiri/aerialist bash -lc "$CMD"
   EXIT_CODE=$?
   if [ "$STOP" = "1" ]; then
@@ -110,5 +112,5 @@ while [ "$STOP" = "0" ] ; do
   sleep 3
 done
 
-echo "   Delivery in: ~/UAV-Testing-Competition/snippets/generated_tests/$(basename $RUN_DIR)/consegna/"
-echo "   (full fail history in .../$(basename $RUN_DIR)/all_fails/)"
+echo "   Delivery in: $SCRIPT_DIR/generated_tests/${RUN_DIR##*/}/consegna/"
+echo "   (full fail history in .../${RUN_DIR##*/}/all_fails/)"

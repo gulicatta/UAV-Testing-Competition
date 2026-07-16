@@ -184,58 +184,47 @@ docker images skhatiri/aerialist
 
 ---
 
-## 7. Repository-Path Compatibility
+## 7. Repository Location and Portability
 
-The current `start.sh` launcher mounts the following fixed host path:
-
-```text
-~/UAV-Testing-Competition/snippets
-```
-
-When the repository is stored in:
-
-```text
-~/Projects/UAV-Testing-Competition
-```
-
-create a symbolic link once:
+The repository may be cloned into any local directory. The launcher determines
+the absolute location of the `snippets/` directory from the location of
+`start.sh` itself:
 
 ```bash
-test -e ~/UAV-Testing-Competition || \
-ln -s ~/Projects/UAV-Testing-Competition ~/UAV-Testing-Competition
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ```
 
-Verify the resolved path:
+This resolved directory is used for:
+
+- the `/workspace` Docker mount;
+- the local `generated_tests/` directory;
+- the Aerialist generated-test output mount.
+
+Therefore, no symbolic link and no fixed repository path are required.
+
+For the repository location used in this guide:
 
 ```bash
-readlink -f ~/UAV-Testing-Competition
+cd ~/Projects/UAV-Testing-Competition/snippets
 ```
 
-The expected resolved directory is:
-
-```text
-/home/<username>/Projects/UAV-Testing-Competition
-```
-
-Verify that the source files are visible through the path used by Docker:
+Verify the portable path configuration:
 
 ```bash
-test -f ~/UAV-Testing-Competition/snippets/cli.py
-test -f ~/UAV-Testing-Competition/snippets/es_generator.py
-test -f ~/UAV-Testing-Competition/snippets/testcase.py
-test -d ~/UAV-Testing-Competition/snippets/case_studies
-
-echo "Repository path verified."
+grep -nE 'SCRIPT_DIR|/workspace|aerialist/generated_tests' start.sh
 ```
 
-This compatibility step prevents errors such as:
+Verify that the required files are present:
 
-```text
-cp: cannot stat '/workspace/testcase.py'
+```bash
+test -f cli.py
+test -f es_generator.py
+test -f random_generator.py
+test -f testcase.py
+test -d case_studies
+
+echo "Repository location verified."
 ```
-
----
-
 ## 8. Prepare the Launcher
 
 Enter the generator directory:
@@ -405,7 +394,11 @@ are not fully deterministic.
 
 ## 13. Important Runtime Parameters
 
-Runtime parameters can be passed before `./start.sh`.
+The runtime parameters listed below are explicitly supported by `start.sh`.
+They may be assigned before the command invocation. Variables defined in
+`config.py` but not explicitly forwarded by `start.sh` are not propagated
+into the Docker container. `MAX_RESTARTS` is handled directly by the
+host-side launcher.
 
 | Variable | Default | Meaning |
 |---|---:|---|
@@ -730,30 +723,32 @@ Example:
 cp: cannot stat '/workspace/testcase.py'
 ```
 
-Check the path expected by `start.sh`:
+The launcher mounts the directory containing `start.sh` as `/workspace`.
+
+Verify that the required project files exist:
 
 ```bash
-readlink -f ~/UAV-Testing-Competition
-ls -la ~/UAV-Testing-Competition/snippets
+cd ~/Projects/UAV-Testing-Competition/snippets
+
+test -f testcase.py
+test -f cli.py
+test -f es_generator.py
 ```
 
-Recreate the compatibility link when necessary:
+Inspect the resolved directory and Docker mounts:
 
 ```bash
-rm -f ~/UAV-Testing-Competition
-
-ln -s \
-  ~/Projects/UAV-Testing-Competition \
-  ~/UAV-Testing-Competition
+grep -nE 'SCRIPT_DIR|/workspace|aerialist/generated_tests' start.sh
 ```
 
-Then verify:
+The expected mount definitions are:
 
 ```bash
-test -f ~/UAV-Testing-Competition/snippets/testcase.py &&
-echo "Mount source is valid."
+-v "$SCRIPT_DIR:/workspace"
+-v "$SCRIPT_DIR/generated_tests:/src/aerialist/generated_tests"
 ```
 
+No repository-level symbolic link is required.
 ### `start.sh` is not executable
 
 ```bash
@@ -851,7 +846,6 @@ test -f case_studies/mission1.yaml
 test -f case_studies/mission2.yaml
 test -f case_studies/mission3.yaml
 
-test -f ~/UAV-Testing-Competition/snippets/testcase.py
 
 echo "SETUP CHECK PASSED"
 ```
